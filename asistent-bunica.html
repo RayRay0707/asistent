@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Asistentul Bunicii</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #fdf6ec 0%, #fde8d0 60%, #f9d5b0 100%);
+    font-family: 'Lora', serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 40px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* SETUP SCREEN */
+  #setup-screen {
+    width: 100%;
+    max-width: 500px;
+    margin-top: 40px;
+    text-align: center;
+  }
+  #setup-screen .icon { font-size: 64px; margin-bottom: 12px; }
+  #setup-screen h1 { font-size: 28px; color: #7a3e00; margin-bottom: 8px; }
+  #setup-screen p { font-size: 17px; color: #a05820; margin-bottom: 28px; font-style: italic; line-height: 1.6; }
+  #api-key-input {
+    width: 100%;
+    padding: 16px 18px;
+    font-size: 17px;
+    border: 2px solid #e0b080;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.8);
+    color: #5a2d00;
+    font-family: 'Nunito', sans-serif;
+    outline: none;
+    margin-bottom: 16px;
+  }
+  #api-key-input:focus { border-color: #c97030; }
+  .hint { font-size: 14px; color: #b07840; margin-bottom: 24px; line-height: 1.5; }
+  .hint a { color: #c97030; }
+
+  /* MAIN SCREEN */
+  #main-screen { width: 100%; max-width: 580px; display: none; flex-direction: column; align-items: center; }
+
+  .header { text-align: center; margin-bottom: 24px; }
+  .header .icon { font-size: 52px; }
+  .header h1 { font-size: 30px; color: #7a3e00; margin-top: 4px; }
+  .header p { font-size: 17px; color: #a05820; font-style: italic; margin-top: 4px; }
+
+  /* Chat */
+  #chat-box {
+    width: 100%;
+    background: rgba(255,255,255,0.72);
+    border-radius: 24px;
+    border: 1.5px solid #f0c898;
+    min-height: 180px;
+    max-height: 42vh;
+    overflow-y: auto;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 24px rgba(180,100,20,0.07);
+  }
+  .empty-hint {
+    text-align: center;
+    color: #c49060;
+    font-size: 20px;
+    padding-top: 36px;
+    font-style: italic;
+    line-height: 1.7;
+  }
+  .msg-wrap { margin-bottom: 16px; display: flex; flex-direction: column; }
+  .msg-wrap.user { align-items: flex-end; }
+  .msg-wrap.ai { align-items: flex-start; }
+  .bubble {
+    max-width: 88%;
+    padding: 13px 18px;
+    font-size: 20px;
+    line-height: 1.65;
+    border-radius: 20px;
+  }
+  .bubble.user {
+    background: linear-gradient(135deg, #e07b20, #c95e00);
+    color: #fff;
+    border-radius: 20px 20px 4px 20px;
+    box-shadow: 0 3px 12px rgba(180,70,0,0.2);
+  }
+  .bubble.ai {
+    background: linear-gradient(135deg, #fffaf3, #ffecd6);
+    color: #5a2d00;
+    border: 1px solid #f0c898;
+    border-radius: 20px 20px 20px 4px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+  }
+  .msg-label { font-size: 13px; color: #b07840; margin-top: 5px; font-family: 'Nunito', sans-serif; padding: 0 4px; }
+
+  /* Typing dots */
+  .typing { display: flex; gap: 7px; padding: 16px 20px; align-items: center; }
+  .dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: #c97030;
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%,80%,100% { transform: scale(0.65); opacity: 0.45; }
+    40% { transform: scale(1.1); opacity: 1; }
+  }
+
+  /* Transcript preview */
+  #transcript-box {
+    width: 100%;
+    background: rgba(255,255,255,0.85);
+    border: 2px dashed #e8a060;
+    border-radius: 16px;
+    padding: 14px 18px;
+    font-size: 21px;
+    color: #7a3e00;
+    font-style: italic;
+    margin-bottom: 14px;
+    display: none;
+    line-height: 1.5;
+  }
+
+  /* Error */
+  #error-box {
+    width: 100%;
+    background: #fff0eb;
+    border: 1.5px solid #f4a070;
+    border-radius: 12px;
+    padding: 12px 18px;
+    color: #c04000;
+    font-size: 18px;
+    margin-bottom: 14px;
+    display: none;
+    font-family: 'Nunito', sans-serif;
+  }
+
+  /* Buttons */
+  #mic-btn {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: none;
+    font-size: 58px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, #e07b20, #c95e00);
+    box-shadow: 0 8px 32px rgba(200,80,0,0.3);
+    color: white;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    outline: none;
+  }
+  #mic-btn.listening {
+    background: linear-gradient(135deg, #ff6b20, #e04000);
+    transform: scale(1.08);
+    box-shadow: 0 0 0 18px rgba(224,100,0,0.18), 0 0 0 36px rgba(224,100,0,0.08), 0 8px 32px rgba(200,80,0,0.4);
+    animation: pulsering 1.2s ease-in-out infinite;
+  }
+  #mic-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    animation: none !important;
+    transform: none !important;
+  }
+  @keyframes pulsering {
+    0%   { box-shadow: 0 0 0 0 rgba(224,100,0,0.35), 0 8px 32px rgba(200,80,0,0.4); }
+    70%  { box-shadow: 0 0 0 28px rgba(224,100,0,0), 0 8px 32px rgba(200,80,0,0.4); }
+    100% { box-shadow: 0 0 0 0 rgba(224,100,0,0), 0 8px 32px rgba(200,80,0,0.4); }
+  }
+  #mic-label {
+    font-size: 19px;
+    color: #a05820;
+    margin-top: 12px;
+    font-style: italic;
+    text-align: center;
+    font-family: 'Lora', serif;
+  }
+
+  #send-btn {
+    display: none;
+    margin-top: 18px;
+    padding: 17px 44px;
+    font-size: 22px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    background: linear-gradient(135deg, #2d7a3e, #1a5c2b);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(30,100,50,0.28);
+    transition: transform 0.15s;
+  }
+  #send-btn:active { transform: scale(0.97); }
+
+  #repeat-btn {
+    display: none;
+    margin-top: 14px;
+    padding: 13px 32px;
+    font-size: 19px;
+    font-family: 'Nunito', sans-serif;
+    background: rgba(255,255,255,0.7);
+    color: #a05820;
+    border: 2px solid #e0b080;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #repeat-btn:active { background: rgba(255,255,255,0.95); }
+
+  #clear-btn {
+    display: none;
+    margin-top: 10px;
+    padding: 11px 28px;
+    font-size: 17px;
+    font-family: 'Nunito', sans-serif;
+    background: transparent;
+    color: #b07840;
+    border: 1.5px solid #deb880;
+    border-radius: 50px;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    display: block;
+    width: 100%;
+    padding: 17px;
+    font-size: 21px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    background: linear-gradient(135deg, #e07b20, #c95e00);
+    color: white;
+    border: none;
+    border-radius: 18px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(200,80,0,0.25);
+    transition: transform 0.1s;
+  }
+  .btn-primary:active { transform: scale(0.98); }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #e0b080; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen">
+  <div class="icon">🌻</div>
+  <h1>Asistentul Bunicii</h1>
+  <p>Pentru a folosi aplicația, ai nevoie de<br>un cod de acces (API key) de la Anthropic.</p>
+  <input id="api-key-input" type="password" placeholder="Introdu codul de acces (sk-ant-...)" autocomplete="off" />
+  <p class="hint">
+    Obții codul gratuit de pe <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a><br>
+    → API Keys → Create Key
+  </p>
+  <button class="btn-primary" onclick="saveKey()">✅ Salvează și pornește</button>
+</div>
+
+<!-- MAIN SCREEN -->
+<div id="main-screen">
+  <div class="header">
+    <div class="icon">🌻</div>
+    <h1>Asistentul Tău</h1>
+    <p>Întreabă orice, răspund imediat</p>
+  </div>
+
+  <div id="chat-box">
+    <div class="empty-hint" id="empty-hint">Apasă butonul de mai jos<br>și vorbește 🎤</div>
+  </div>
+
+  <div id="transcript-box"></div>
+  <div id="error-box"></div>
+
+  <button id="mic-btn" ontouchstart="startListen(event)" ontouchend="stopListen(event)"
+          onmousedown="startListen(event)" onmouseup="stopListen(event)">🎤</button>
+  <div id="mic-label">Ține apăsat și vorbește</div>
+
+  <button id="send-btn" onclick="sendMessage()">✉️ Trimite întrebarea</button>
+  <button id="repeat-btn" onclick="repeatLast()">🔊 Repetă răspunsul</button>
+  <button id="clear-btn" onclick="clearAll()">🗑️ Șterge conversația</button>
+</div>
+
+<script>
+  const API_URL = "https://api.anthropic.com/v1/messages";
+  const SYSTEM = `Ești un asistent vocal prietenos pentru o persoană în vârstă din România.
+Răspunzi MEREU în română, cu propoziții scurte și clare, fără cuvinte complicate.
+Dacă se cer informații actuale (știri, vreme, prețuri etc.), le cauți pe net.
+Ești cald, răbdător și respectuos. Răspunsurile sunt scurte — maxim 3-4 propoziții.`;
+
+  let apiKey = localStorage.getItem('bunica_api_key') || '';
+  let recognition = null;
+  let transcript = '';
+  let messages = [];
+  let lastAIText = '';
+  let listening = false;
+
+  // Init
+  if (apiKey) showMain();
+
+  function saveKey() {
+    const val = document.getElementById('api-key-input').value.trim();
+    if (!val.startsWith('sk-ant-')) {
+      alert('Codul trebuie să înceapă cu "sk-ant-"');
+      return;
+    }
+    localStorage.setItem('bunica_api_key', val);
+    apiKey = val;
+    showMain();
+  }
+
+  function showMain() {
+    document.getElementById('setup-screen').style.display = 'none';
+    const m = document.getElementById('main-screen');
+    m.style.display = 'flex';
+  }
+
+  // Speech Recognition
+  function startListen(e) {
+    e.preventDefault();
+    if (listening) return;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { showError("Browserul nu suportă microfon. Folosește Chrome."); return; }
+    hideError();
+    transcript = '';
+    updateTranscript('');
+
+    recognition = new SR();
+    recognition.lang = 'ro-RO';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => {
+      listening = true;
+      const btn = document.getElementById('mic-btn');
+      btn.classList.add('listening');
+      btn.textContent = '🎙️';
+      document.getElementById('mic-label').textContent = 'Ascult... eliberează când termini';
+    };
+    recognition.onresult = (ev) => {
+      transcript = Array.from(ev.results).map(r => r[0].transcript).join('');
+      updateTranscript(transcript);
+    };
+    recognition.onend = () => {
+      listening = false;
+      const btn = document.getElementById('mic-btn');
+      btn.classList.remove('listening');
+      btn.textContent = '🎤';
+      document.getElementById('mic-label').textContent = 'Ține apăsat și vorbește';
+      if (transcript.trim()) {
+        document.getElementById('send-btn').style.display = 'block';
+      }
+    };
+    recognition.onerror = (ev) => {
+      listening = false;
+      document.getElementById('mic-btn').classList.remove('listening');
+      document.getElementById('mic-btn').textContent = '🎤';
+      document.getElementById('mic-label').textContent = 'Ține apăsat și vorbește';
+      if (ev.error !== 'no-speech') showError('Eroare microfon: ' + ev.error);
+    };
+    recognition.start();
+  }
+
+  function stopListen(e) {
+    e.preventDefault();
+    if (recognition) recognition.stop();
+  }
+
+  function updateTranscript(text) {
+    const box = document.getElementById('transcript-box');
+    if (text) {
+      box.style.display = 'block';
+      box.textContent = '🎙️ ' + text;
+    } else {
+      box.style.display = 'none';
+    }
+  }
+
+  async function sendMessage() {
+    const text = transcript.trim();
+    if (!text) return;
+    transcript = '';
+    updateTranscript('');
+    document.getElementById('send-btn').style.display = 'none';
+    document.getElementById('repeat-btn').style.display = 'none';
+    hideError();
+    hideEmpty();
+
+    addBubble('user', text);
+    messages.push({ role: 'user', content: text });
+
+    const loadEl = addTyping();
+    document.getElementById('mic-btn').disabled = true;
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-calls': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: SYSTEM,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          messages: messages
+        })
+      });
+
+      const data = await res.json();
+      loadEl.remove();
+
+      if (data.error) { showError('Eroare: ' + data.error.message); return; }
+
+      const reply = (data.content || [])
+        .filter(b => b.type === 'text')
+        .map(b => b.text).join('\n').trim() || 'Nu am primit răspuns. Încearcă din nou.';
+
+      messages.push({ role: 'assistant', content: reply });
+      lastAIText = reply;
+      addBubble('ai', reply);
+      document.getElementById('repeat-btn').style.display = 'block';
+      document.getElementById('clear-btn').style.display = 'block';
+      speak(reply);
+
+    } catch (err) {
+      loadEl.remove();
+      showError('Eroare de rețea. Verifică internetul.');
+    } finally {
+      document.getElementById('mic-btn').disabled = false;
+    }
+  }
+
+  function speak(text) {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ro-RO';
+    u.rate = 0.82;
+    u.pitch = 1;
+    // Try to find a Romanian voice
+    const voices = window.speechSynthesis.getVoices();
+    const roVoice = voices.find(v => v.lang.startsWith('ro'));
+    if (roVoice) u.voice = roVoice;
+    window.speechSynthesis.speak(u);
+  }
+
+  function repeatLast() {
+    if (lastAIText) speak(lastAIText);
+  }
+
+  function addBubble(role, text) {
+    const chat = document.getElementById('chat-box');
+    const wrap = document.createElement('div');
+    wrap.className = 'msg-wrap ' + role;
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble ' + role;
+    bubble.textContent = text;
+    const label = document.createElement('div');
+    label.className = 'msg-label';
+    label.textContent = role === 'user' ? 'Tu' : 'Asistentul';
+    wrap.appendChild(bubble);
+    wrap.appendChild(label);
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+    return wrap;
+  }
+
+  function addTyping() {
+    const chat = document.getElementById('chat-box');
+    const wrap = document.createElement('div');
+    wrap.className = 'msg-wrap ai';
+    const typing = document.createElement('div');
+    typing.className = 'bubble ai typing';
+    typing.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+    wrap.appendChild(typing);
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+    return wrap;
+  }
+
+  function clearAll() {
+    messages = [];
+    lastAIText = '';
+    transcript = '';
+    updateTranscript('');
+    window.speechSynthesis.cancel();
+    const chat = document.getElementById('chat-box');
+    chat.innerHTML = '<div class="empty-hint" id="empty-hint">Apasă butonul de mai jos<br>și vorbește 🎤</div>';
+    document.getElementById('send-btn').style.display = 'none';
+    document.getElementById('repeat-btn').style.display = 'none';
+    document.getElementById('clear-btn').style.display = 'none';
+    hideError();
+  }
+
+  function hideEmpty() {
+    const e = document.getElementById('empty-hint');
+    if (e) e.remove();
+  }
+
+  function showError(msg) {
+    const b = document.getElementById('error-box');
+    b.style.display = 'block';
+    b.textContent = '⚠️ ' + msg;
+  }
+  function hideError() {
+    document.getElementById('error-box').style.display = 'none';
+  }
+
+  // Load voices after page loads
+  window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+</script>
+</body>
+</html>
