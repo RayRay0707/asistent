@@ -423,7 +423,7 @@ Ești cald, răbdător și respectuos. Răspunsurile sunt scurte — maxim 3-4 p
       const data = await res.json();
       loadEl.remove();
 
-      if (data.error) { showError('Eroare: ' + data.error.message); return; }
+      if (!res.ok || data.error) { showError("API " + res.status + ": " + (data.error?.message || JSON.stringify(data.error))); return; }
 
       const reply = (data.content || [])
         .filter(b => b.type === 'text')
@@ -438,7 +438,7 @@ Ești cald, răbdător și respectuos. Răspunsurile sunt scurte — maxim 3-4 p
 
     } catch (err) {
       loadEl.remove();
-      showError('Eroare de rețea. Verifică internetul.');
+      const errMsg = err.message || String(err); showError("Eroare: " + errMsg);
     } finally {
       document.getElementById('mic-btn').disabled = false;
     }
